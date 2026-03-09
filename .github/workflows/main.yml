@@ -18,9 +18,11 @@ jobs:
           printf '%s' '${{ secrets.OCI_CONFIG }}' > ~/.oci/config
           printf '%s' '${{ secrets.OCI_KEY }}' > ~/.oci/key.pem
           chmod 600 ~/.oci/key.pem ~/.oci/config
+          echo "${{ secrets.SSH_PUB_KEY }}" > ~/.oci/ssh_key.pub
 
       - name: Try Create Instance
         run: |
+          SUCCESS=false
           for AD in "ZwpG:EU-FRANKFURT-1-AD-1" "ZwpG:EU-FRANKFURT-1-AD-2" "ZwpG:EU-FRANKFURT-1-AD-3"; do
             echo "جارٍ المحاولة على $AD ..."
             RESULT=$(oci compute instance launch \
@@ -30,7 +32,7 @@ jobs:
               --shape-config '{"ocpus":4,"memoryInGBs":24}' \
               --subnet-id "${{ secrets.SUBNET_ID }}" \
               --image-id "${{ secrets.IMAGE_ID }}" \
-              --ssh-authorized-keys-file <(echo "${{ secrets.SSH_PUB_KEY }}") \
+              --ssh-authorized-keys-file ~/.oci/ssh_key.pub \
               --assign-public-ip true 2>&1)
 
             if echo "$RESULT" | grep -q '"lifecycle-state"'; then
@@ -38,9 +40,14 @@ jobs:
               curl -s "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
                    --data-urlencode "chat_id=${{ secrets.CHAT_ID }}" \
                    --data-urlencode "text=✅ تم إنشاء Oracle Instance على $AD بنجاح!"
-              exit 0
+              SUCCESS=true
+              break
             else
               echo "❌ $AD ممتلئ"
+              echo "تفاصيل: $RESULT"
             fi
           done
-          echo "⏳ جميع الـ ADs ممتلئة، ستتم المحاولة مجددًا"
+
+          if [ "$SUCCESS" = false ]; then
+            echo "⏳ جميع الـ ADs ممتلئة، ستتم المحاولة مجددًا بعد 10 دقائق"
+          fi
