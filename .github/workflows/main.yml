@@ -8,7 +8,7 @@ on:
 permissions:
   contents: write
 jobs:
-  try-create:
+  keep-alive:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -21,6 +21,10 @@ jobs:
           git add keep_alive.txt
           git commit -m "⏰ keep alive: $(date '+%Y-%m-%d %H:%M')" || echo "No changes"
           git push
+
+  try-ad-1:
+    runs-on: ubuntu-latest
+    steps:
       - name: Install OCI CLI
         run: pip install oci-cli
       - name: Setup OCI Config
@@ -30,34 +34,92 @@ jobs:
           printf '%s' '${{ secrets.OCI_KEY }}' > ~/.oci/key.pem
           chmod 600 ~/.oci/key.pem ~/.oci/config
           echo "${{ secrets.SSH_PUB_KEY }}" > ~/.oci/ssh_key.pub
-      - name: Try Create Instance
+      - name: Try AD-1
         run: |
           set +e
-          SUCCESS=false
-          for AD in "ZwpG:EU-FRANKFURT-1-AD-1" "ZwpG:EU-FRANKFURT-1-AD-2" "ZwpG:EU-FRANKFURT-1-AD-3"; do
-            echo "جارٍ المحاولة على $AD ..."
-            RESULT=$(oci compute instance launch \
-              --availability-domain "$AD" \
-              --compartment-id "${{ secrets.COMPARTMENT_ID }}" \
-              --shape "VM.Standard.A1.Flex" \
-              --shape-config '{"ocpus":4,"memoryInGBs":24}' \
-              --subnet-id "${{ secrets.SUBNET_ID }}" \
-              --image-id "${{ secrets.IMAGE_ID }}" \
-              --ssh-authorized-keys-file ~/.oci/ssh_key.pub \
-              --assign-public-ip true 2>&1)
-            if echo "$RESULT" | grep -q '"lifecycle-state"'; then
-              echo "✅ نجح على $AD!"
-              curl -s "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
-                   --data-urlencode "chat_id=${{ secrets.CHAT_ID }}" \
-                   --data-urlencode "text=✅ تم إنشاء Oracle Instance على $AD بنجاح!"
-              SUCCESS=true
-              break
-            else
-              echo "❌ $AD ممتلئ"
-              echo "تفاصيل: $RESULT"
-            fi
-          done
-          if [ "$SUCCESS" = false ]; then
-            echo "⏳ جميع الـ ADs ممتلئة، ستتم المحاولة مجددًا بعد 10 دقائق"
+          RESULT=$(oci compute instance launch \
+            --availability-domain "ZwpG:EU-FRANKFURT-1-AD-1" \
+            --compartment-id "${{ secrets.COMPARTMENT_ID }}" \
+            --shape "VM.Standard.A1.Flex" \
+            --shape-config '{"ocpus":4,"memoryInGBs":24}' \
+            --subnet-id "${{ secrets.SUBNET_ID }}" \
+            --image-id "${{ secrets.IMAGE_ID }}" \
+            --ssh-authorized-keys-file ~/.oci/ssh_key.pub \
+            --assign-public-ip true 2>&1)
+          if echo "$RESULT" | grep -q '"lifecycle-state"'; then
+            echo "✅ نجح على AD-1!"
+            curl -s "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
+                 --data-urlencode "chat_id=${{ secrets.CHAT_ID }}" \
+                 --data-urlencode "text=✅ تم إنشاء Oracle Instance على AD-1 بنجاح!"
+          else
+            echo "❌ AD-1 ممتلئ"
+          fi
+          exit 0
+
+  try-ad-2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install OCI CLI
+        run: pip install oci-cli
+      - name: Setup OCI Config
+        run: |
+          mkdir -p ~/.oci
+          printf '%s' '${{ secrets.OCI_CONFIG }}' > ~/.oci/config
+          printf '%s' '${{ secrets.OCI_KEY }}' > ~/.oci/key.pem
+          chmod 600 ~/.oci/key.pem ~/.oci/config
+          echo "${{ secrets.SSH_PUB_KEY }}" > ~/.oci/ssh_key.pub
+      - name: Try AD-2
+        run: |
+          set +e
+          RESULT=$(oci compute instance launch \
+            --availability-domain "ZwpG:EU-FRANKFURT-1-AD-2" \
+            --compartment-id "${{ secrets.COMPARTMENT_ID }}" \
+            --shape "VM.Standard.A1.Flex" \
+            --shape-config '{"ocpus":4,"memoryInGBs":24}' \
+            --subnet-id "${{ secrets.SUBNET_ID }}" \
+            --image-id "${{ secrets.IMAGE_ID }}" \
+            --ssh-authorized-keys-file ~/.oci/ssh_key.pub \
+            --assign-public-ip true 2>&1)
+          if echo "$RESULT" | grep -q '"lifecycle-state"'; then
+            echo "✅ نجح على AD-2!"
+            curl -s "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
+                 --data-urlencode "chat_id=${{ secrets.CHAT_ID }}" \
+                 --data-urlencode "text=✅ تم إنشاء Oracle Instance على AD-2 بنجاح!"
+          else
+            echo "❌ AD-2 ممتلئ"
+          fi
+          exit 0
+
+  try-ad-3:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install OCI CLI
+        run: pip install oci-cli
+      - name: Setup OCI Config
+        run: |
+          mkdir -p ~/.oci
+          printf '%s' '${{ secrets.OCI_CONFIG }}' > ~/.oci/config
+          printf '%s' '${{ secrets.OCI_KEY }}' > ~/.oci/key.pem
+          chmod 600 ~/.oci/key.pem ~/.oci/config
+          echo "${{ secrets.SSH_PUB_KEY }}" > ~/.oci/ssh_key.pub
+      - name: Try AD-3
+        run: |
+          set +e
+          RESULT=$(oci compute instance launch \
+            --availability-domain "ZwpG:EU-FRANKFURT-1-AD-3" \
+            --compartment-id "${{ secrets.COMPARTMENT_ID }}" \
+            --shape "VM.Standard.A1.Flex" \
+            --shape-config '{"ocpus":4,"memoryInGBs":24}' \
+            --subnet-id "${{ secrets.SUBNET_ID }}" \
+            --image-id "${{ secrets.IMAGE_ID }}" \
+            --ssh-authorized-keys-file ~/.oci/ssh_key.pub \
+            --assign-public-ip true 2>&1)
+          if echo "$RESULT" | grep -q '"lifecycle-state"'; then
+            echo "✅ نجح على AD-3!"
+            curl -s "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
+                 --data-urlencode "chat_id=${{ secrets.CHAT_ID }}" \
+                 --data-urlencode "text=✅ تم إنشاء Oracle Instance على AD-3 بنجاح!"
+          else
+            echo "❌ AD-3 ممتلئ"
           fi
           exit 0
