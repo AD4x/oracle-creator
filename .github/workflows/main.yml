@@ -3,17 +3,16 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
-
+  repository_dispatch:
+    types: [run]
 permissions:
   contents: write
-
 jobs:
   try-create:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
-
       - name: Keep Repo Active
         run: |
           echo "Last run: $(date)" > keep_alive.txt
@@ -22,10 +21,8 @@ jobs:
           git add keep_alive.txt
           git commit -m "⏰ keep alive: $(date '+%Y-%m-%d %H:%M')" || echo "No changes"
           git push
-
       - name: Install OCI CLI
         run: pip install oci-cli
-
       - name: Setup OCI Config
         run: |
           mkdir -p ~/.oci
@@ -33,7 +30,6 @@ jobs:
           printf '%s' '${{ secrets.OCI_KEY }}' > ~/.oci/key.pem
           chmod 600 ~/.oci/key.pem ~/.oci/config
           echo "${{ secrets.SSH_PUB_KEY }}" > ~/.oci/ssh_key.pub
-
       - name: Try Create Instance
         run: |
           set +e
