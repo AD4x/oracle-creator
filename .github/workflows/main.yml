@@ -1,0 +1,46 @@
+name: Oracle Instance Creator
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  try-create:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install OCI CLI
+        run: pip install oci-cli
+
+      - name: Setup OCI Config
+        run: |
+          mkdir -p ~/.oci
+          printf '%s' '${{ secrets.OCI_CONFIG }}' > ~/.oci/config
+          printf '%s' '${{ secrets.OCI_KEY }}' > ~/.oci/key.pem
+          chmod 600 ~/.oci/key.pem ~/.oci/config
+
+      - name: Try Create Instance
+        run: |
+          for AD in "ZwpG:EU-FRANKFURT-1-AD-1" "ZwpG:EU-FRANKFURT-1-AD-2" "ZwpG:EU-FRANKFURT-1-AD-3"; do
+            echo "جارٍ المحاولة على $AD ..."
+            RESULT=$(oci compute instance launch \
+              --availability-domain "$AD" \
+              --compartment-id "${{ secrets.COMPARTMENT_ID }}" \
+              --shape "VM.Standard.A1.Flex" \
+              --shape-config '{"ocpus":4,"memoryInGBs":24}' \
+              --subnet-id "${{ secrets.SUBNET_ID }}" \
+              --image-id "${{ secrets.IMAGE_ID }}" \
+              --ssh-authorized-keys-file <(echo "${{ secrets.SSH_PUB_KEY }}") \
+              --assign-public-ip true 2>&1)
+
+            if echo "$RESULT" | grep -q '"lifecycle-state"'; then
+              echo "✅ نجح على $AD!"
+              curl -s "https://api.telegram.org/bot${{ secrets.BOT_TOKEN }}/sendMessage" \
+                   --data-urlencode "chat_id=${{ secrets.CHAT_ID }}" \
+                   --data-urlencode "text=✅ تم إنشاء Oracle Instance على $AD بنجاح!"
+              exit 0
+            else
+              echo "❌ $AD ممتلئ"
+            fi
+          done
+          echo "⏳ جميع الـ ADs ممتلئة، ستتم المحاولة مجددًا"
