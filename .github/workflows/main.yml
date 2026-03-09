@@ -7,8 +7,21 @@ jobs:
   try-create:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Keep Repo Active
+        run: |
+          echo "Last run: $(date)" > keep_alive.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add keep_alive.txt
+          git commit -m "⏰ keep alive: $(date '+%Y-%m-%d %H:%M')" || echo "No changes"
+          git push
+
       - name: Install OCI CLI
         run: pip install oci-cli
+
       - name: Setup OCI Config
         run: |
           mkdir -p ~/.oci
@@ -16,9 +29,10 @@ jobs:
           printf '%s' '${{ secrets.OCI_KEY }}' > ~/.oci/key.pem
           chmod 600 ~/.oci/key.pem ~/.oci/config
           echo "${{ secrets.SSH_PUB_KEY }}" > ~/.oci/ssh_key.pub
+
       - name: Try Create Instance
         run: |
-          set +e  # ← تعطيل الإيقاف التلقائي عند فشل أي أمر
+          set +e
           SUCCESS=false
           for AD in "ZwpG:EU-FRANKFURT-1-AD-1" "ZwpG:EU-FRANKFURT-1-AD-2" "ZwpG:EU-FRANKFURT-1-AD-3"; do
             echo "جارٍ المحاولة على $AD ..."
@@ -46,4 +60,4 @@ jobs:
           if [ "$SUCCESS" = false ]; then
             echo "⏳ جميع الـ ADs ممتلئة، ستتم المحاولة مجددًا بعد 10 دقائق"
           fi
-          exit 0  # ← دائمًا أنهِ بنجاح بغضّ النظر عن النتيجة
+          exit 0
